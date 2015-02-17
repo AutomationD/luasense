@@ -1,0 +1,5 @@
+<% render('views._header') %>
+<div class="wrapper row-offcanvas row-offcanvas-left">
+    <% render('views._left') %>
+    <% render('views._right') %>
+</div><!-- ./wrapper -->

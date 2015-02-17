@@ -1,0 +1,14 @@
+app/nginx.conf.compiled
+client_body_temp
+logs
+qemu
+.idea
+proxy_temp
+uwsgi_temp
+scgi_temp
+fastcgi_temp
+nginx.conf
+mime.types
+**/app.db
+**/*.img
+**/*.deb
