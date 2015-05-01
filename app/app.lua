@@ -2,16 +2,23 @@
 local http = require "lapis.nginx.http"
 
 local lapis = require("lapis")
+local console = require("lapis.console")
 local http = require("lapis.nginx.http")
 local config = require("lapis.config").get()
+--local colors = require("ansicolors")
+local logging = require("lapis.logging")
 
 local util = require("lapis.util")
-local console = require("lapis.console")
+
 local json_params = require("lapis.application").json_params
 
 local socketurl = require("socket.url")
 local sqlite3 = require("lsqlite3")
 local inspect = require('inspect')
+
+local strlen =  string.len
+local cjson = require "cjson"
+local rabbitmq = require "resty.rabbitmqstomp"
 
 
 
@@ -26,29 +33,54 @@ app:enable("etlua")
 app.layout = require "views._layout"
 
 
---app:get("/console", console.make())
+
 
 --setCache("test","abc")
-
+app:match("all", "/console", console.make())
 
 app:get("index", "/", function(self)
     self.title = "Dashboard"
     self.temp = 4.3
     self.test = data.test
+    self.class_active = 'class=active'
     return {render = true}
+end)
+app:get('/pub', function(self)
+    data = {
+        sensor='all',
+        request='getData',
+    }
+
+    postRabbitMQRequest(data)
+    return "OK"
 end)
 
 
 app:get('sensors','/sensors', function(self)
     self.title = "Sensors"
+
     --    self.temp = 4.3
     --    self.test = data.test
-    self.sensors = getSensors()
+--    self.sensors = getSensors()
 
     return {render = true}
 --    return self.route_name
 --    return self:url_for('index')
 --    return inspect(self)
+
+end)
+
+app:get('websocket_test','/websocket_test', function(self)
+--    self.title = "Websocket Test"
+    --    self.temp = 4.3
+    --    self.test = data.test
+--    self.sensors = getSensors()
+
+
+--    return {render = true}
+    --    return self.route_name
+    --    return self:url_for('index')
+    return inspect(self.route_name)
 
 end)
 
@@ -70,6 +102,54 @@ end))
 
 -----------------------------
 -----------------------------
+function postRabbitMQRequest (msg)
+    local opts = {
+        username = "luasense",
+        password = "luasense",
+        vhost    = "/",
+    }
+
+    local headers = {}
+
+    local mq, err = rabbitmq:new(opts)
+
+    if not mq then
+        return
+    end
+
+    mq:set_timeout(10000)
+
+    local ok, err = mq:connect("127.0.0.1",61613)
+
+    if not ok then
+        ngx.log(ngx.ERROR, "Error: ")
+        return
+    else
+        headers['ok'] = 'true'
+    end
+
+
+    headers["destination"] = "/topic/luasense"
+    --    headers["receipt"] = "msg#1"
+    --    headers["app-id"] = "luaresty"
+    --    headers["persistent"] = "true"
+    headers["content-type"] = "application/json"
+
+
+    local ok, err = mq:send(cjson.encode(msg), headers)
+--    local ok, err = mq:send(msg, headers)
+    if not ok then
+        return
+    end
+    logging.notice("Published: ".. cjson.encode(msg))
+    return true
+end
+
+
+function requestSensorReadings ()
+    -- Requesting a refresh for sensors
+end
+
 
 function getSensors()
     -- Getting a list of sensors that we have
@@ -135,9 +215,9 @@ function getCache(key)
 end
 
 
-
 function initDB ()
     -- If tables don't exist - create.
+
 end
 
 
@@ -177,5 +257,34 @@ function table.tostring( tbl )
     return "{" .. table.concat( result, "," ) .. "}"
 end
 
+-----------
 
+--
+--local headers = {}
+--headers["destination"] = "/amq/queue/queuename"
+--headers["persistent"] = "true"
+--headers["id"] = "123"
+--
+--local ok, err = mq:subscribe(headers)
+--if not ok then
+--    return
+--end
+--
+--local data, err = mq:receive()
+--if not ok then
+--    return
+--end
+--ngx.log(ngx.INFO, "Consumed: " .. data)
+--
+--local headers = {}
+--headers["persistent"] = "true"
+--headers["id"] = "123"
+--
+--local ok, err = mq:unsubscribe(headers)
+--
+--local ok, err = mq:set_keepalive(10000, 10000)
+--if not ok then
+--    return
+--end
+-----------
 return app

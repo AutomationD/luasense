@@ -13,3 +13,10 @@ In order to add it to your raspbian execute the following:
 echo "deb http://dl.bintray.com/kireevco/deb /" | sudo tee -a /etc/apt/sources.list
 echo "deb-src http://dl.bintray.com/kireevco/deb /" | sudo tee -a /etc/apt/sources.list
 ```
+
+
+## To install run a bootstrap script on your raspberry pi:
+It will bootstrap puppet and configure luasense platform
+```bash
+sudo curl -sL https://bintray.com/artifact/download/kireevco/generic/bootstrap.sh | sudo bash -
+```
